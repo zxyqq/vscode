@@ -346,6 +346,7 @@ export abstract class PickerQuickAccessProvider<T extends IPickerQuickAccessItem
 			}
 
 			const [item] = picker.selectedItems;
+			console.info(`[307333] onDidAccept: selected=${picker.selectedItems.length} active=${picker.activeItems.length} keyMods=${JSON.stringify(picker.keyMods)} hasAccept=${typeof item?.accept === 'function'} hasAttach=${typeof item?.attach === 'function'} t=${performance.now().toFixed(1)}ms`);
 			if (typeof item?.accept === 'function') {
 				const isAttachAction = isKeyModified(picker.keyMods) && !!item.attach;
 				if (isAttachAction) {

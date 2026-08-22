@@ -140,29 +140,40 @@ export class GotoSymbolQuickAccessProvider extends AbstractGotoSymbolQuickAccess
 		return this.doGetSymbolPicks(this.getDocumentSymbols(model, token), prepareQuery(filter), options, token, model);
 	}
 
-	protected override async doGetSymbolPicks(symbolsPromise: Promise<DocumentSymbol[]>, query: IPreparedQuery, options: { extraContainerLabel?: string } | undefined, token: CancellationToken, model: ITextModel): Promise<Array<IGotoSymbolQuickPickItem | IQuickPickSeparator>> {
-		const picks = await super.doGetSymbolPicks(symbolsPromise, query, options, token, model);
-		const modelUri = model.uri;
-		for (const pick of picks) {
-			const symbolPick = pick as IGotoSymbolQuickPickItem;
-			if (symbolPick.range && !symbolPick.attach) {
-				symbolPick.attach = () => {
-					const widget = this.chatWidgetService.lastFocusedWidget;
-					if (!widget) {
-						return;
-					}
-					const entry: ISymbolVariableEntry = {
-						kind: 'symbol',
-						id: JSON.stringify({ uri: modelUri.toString(), range: symbolPick.range!.decoration }),
-						name: symbolPick.symbolName ?? symbolPick.label,
-						value: { uri: modelUri, range: symbolPick.range!.decoration },
-						symbolKind: symbolPick.kind,
+	protected override doGetSymbolPicks(symbolsPromise: Promise<DocumentSymbol[]>, query: IPreparedQuery, options: { extraContainerLabel?: string } | undefined, token: CancellationToken, model: ITextModel): Promise<Array<IGotoSymbolQuickPickItem | IQuickPickSeparator>> {
+		const picksPromise = super.doGetSymbolPicks(symbolsPromise, query, options, token, model);
+
+		// #307333: Decorate the picks in a fire-and-forget continuation rather
+		// than `await`ing the promise before returning it. Awaiting here adds an
+		// extra microtask hop before the caller (the quick pick) observes the
+		// picks, which can delay them past a programmatic `accept` that fires
+		// immediately after the picker opens (e.g. the second command of a
+		// `runCommands` keybinding), making the accept a silent no-op.
+		picksPromise.then(picks => {
+			const modelUri = model.uri;
+			for (const pick of picks) {
+				const symbolPick = pick as IGotoSymbolQuickPickItem;
+				if (symbolPick.range && !symbolPick.attach) {
+					symbolPick.attach = () => {
+						const widget = this.chatWidgetService.lastFocusedWidget;
+						if (!widget) {
+							return;
+						}
+						const entry: ISymbolVariableEntry = {
+							kind: 'symbol',
+							id: JSON.stringify({ uri: modelUri.toString(), range: symbolPick.range!.decoration }),
+							name: symbolPick.symbolName ?? symbolPick.label,
+							value: { uri: modelUri, range: symbolPick.range!.decoration },
+							symbolKind: symbolPick.kind,
+						};
+						widget.attachmentModel.addContext(entry);
 					};
-					widget.attachmentModel.addContext(entry);
-				};
+				}
 			}
-		}
-		return picks;
+			console.info(`[307333] gotoSymbol picks decorated: ${picks.length} picks at t=${performance.now().toFixed(1)}ms`);
+		});
+
+		return picksPromise;
 	}
 
 	//#endregion

@@ -101,9 +101,11 @@ class RunCommands extends Action2 {
 				const cmd = args.commands[i];
 
 				logService.debug(`runCommands: executing ${i}-th command: ${safeStringify(cmd)}`);
+				console.info(`[307333] runCommands: executing ${i}: ${typeof cmd === 'string' ? cmd : cmd.command} t=${performance.now().toFixed(1)}ms`);
 
 				await this._runCommand(commandService, cmd);
 
+				console.info(`[307333] runCommands: executed ${i} t=${performance.now().toFixed(1)}ms`);
 				logService.debug(`runCommands: executed ${i}-th command`);
 			}
 		} catch (err) {

@@ -1,0 +1,40 @@
+name: Build Win32 x64 (fix test)
+
+on:
+  push:
+    branches: [fix/307333-runcommands-accept]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: npm ci
+        run: npm ci --no-audit
+
+      - name: Build vscode-win32-x64
+        run: node node_modules/gulp/bin/gulp.js vscode-win32-x64
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VSCode-win32-x64-fix-307333
+          path: |
+            ../VSCode-win32-x64
+            !../VSCode-win32-x64/**/*.pdb
+          retention-days: 14
+          if-no-files-found: error
