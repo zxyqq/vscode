@@ -21,6 +21,15 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      - name: Add signtool to PATH
+        shell: pwsh
+        run: |
+          $signtool = (Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1).DirectoryName
+          if (-not $signtool) { $signtool = (Get-Command signtool.exe -ErrorAction SilentlyContinue).Source }
+          if (-not $signtool) { Write-Output "signtool not found"; exit 1 }
+          Write-Output $signtool
+          Add-Content $env:GITHUB_PATH $signtool
+
       - name: npm ci
         run: npm ci --no-audit
 
