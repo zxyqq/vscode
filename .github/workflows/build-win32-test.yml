@@ -38,12 +38,14 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=8192
 
+      - name: Move build output into workspace
+        shell: pwsh
+        run: Move-Item "..\VSCode-win32-x64" "VSCode-win32-x64"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: VSCode-win32-x64-fix-307333
-          path: |
-            ../VSCode-win32-x64
-            !../VSCode-win32-x64/**/*.pdb
+          path: VSCode-win32-x64
           retention-days: 14
           if-no-files-found: error
